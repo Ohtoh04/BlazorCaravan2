@@ -1,0 +1,232 @@
+﻿@page "/caravan"
+
+@using System.Collections.Generic
+@using BlazorCaravan2.Client.Services
+@using CaravanDomain.Models;
+@using CaravanDomain.Entities;
+@using Microsoft.AspNetCore.SignalR.Client;
+
+@inject NavigationManager Navigation
+@inject GameHubService GameHub
+
+
+@code {
+    [Parameter]
+    public string SessionId { get; set; } = string.Empty;
+
+    int maxHandCards = 8;
+    int maxCaravanCards = 10;
+
+    // Данные для карт
+    List<string> player1Hand = new List<string> { "10♠", "2♥", "K♣", "3♦" }; // Карты на руке у игрока 1
+    List<string> player2Hand = new List<string> { "4♣", "A♠", "9♥", "J♦" }; // Карты на руке у игрока 2
+    List<string> caravan1player = new List<string> { "5♦", "7♠", "8♣" };           // Первый караван
+    List<string> caravan2player = new List<string> { "3♥", "Q♦" };                 // Второй караван
+    List<string> caravan3player = new List<string> { "6♠", "2♣", "K♦" };           // Третий караван
+
+    List<string> caravan1enemy = new List<string> { "5♦", "7♠", "8♣" };           // Первый караван
+    List<string> caravan2enemy = new List<string> { "3♥", "Q♦" };                 // Второй караван
+    List<string> caravan3enemy = new List<string> { "6♠", "2♣", "K♦" };           // Третий караван
+
+    int deckCount = 20;  // Количество карт, оставшихся в колоде
+
+
+    protected HubConnection? HubConnection;
+    protected string PlayerId = Guid.NewGuid().ToString();
+
+    protected bool IsConnected = false;
+    protected bool CanStart = false;
+    protected string Message = string.Empty;
+
+    protected GameState? GameState;
+    public async Task OnInitializedAsync()
+    {
+        // Initialize SignalR connection
+        HubConnection = new HubConnectionBuilder()
+           .WithUrl("/caravanhub")
+           .Build();
+
+        // Handle connection events
+        HubConnection.On<string>("GameStarted", (gameStateJson) =>
+        {
+            GameState = System.Text.Json.JsonSerializer.Deserialize<GameState>(gameStateJson);
+            StateHasChanged();
+        });
+
+        HubConnection.On<string, string>("CardPlayed", (playerId, gameStateJson) =>
+        {
+            GameState = System.Text.Json.JsonSerializer.Deserialize<GameState>(gameStateJson);
+            StateHasChanged();
+        });
+
+        HubConnection.On<string>("GameOver", (winnerId) =>
+        {
+            Message = winnerId == PlayerId ? "You Won!" : "You Lost!";
+            StateHasChanged();
+        });
+
+        // Start the connection
+        await HubConnection.StartAsync();
+        IsConnected = true;
+
+        // Join the game session
+        SessionId = await HubConnection.InvokeAsync<string>("JoinGame", PlayerId);
+        Message = "Waiting for another player to join...";
+        StateHasChanged();
+    }
+
+    public async Task StartGame()
+    {
+        if (HubConnection != null)
+        {
+            await HubConnection.InvokeAsync("StartGame", SessionId);
+            Message = "Game started!";
+            CanStart = false;
+        }
+    }
+
+    public async Task PlayCard(Card card)
+    {
+        if (HubConnection != null && GameState != null)
+        {
+            int caravanIndex = 0; // Allow the user to choose the caravan index in a real UI
+            await HubConnection.InvokeAsync("PlayCard", SessionId, PlayerId, card, caravanIndex);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (HubConnection != null)
+        {
+            await HubConnection.DisposeAsync();
+        }
+    }
+}
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Caravan</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .card-stack { max-height: 500px; overflow-y: auto; }
+        .card { margin-top: -15px; background-color: white; padding: 10px; border: 1px solid #ccc; text-align: center; }
+        .deck, .hand-cards { text-align: center; margin-bottom: 20px; }
+        .hand-cards .card { display: inline-block; margin-right: 10px; }
+        .hidden-card { background: #888; color: transparent; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <!-- Карты на руке Игрока 1 -->
+            <div class="col-md-2 hand-cards">
+                <h4>Карты Игрока 1</h4>
+                @for (int i = 0; i < maxHandCards; i++) {
+                    if (i < player1Hand.Count) {
+                        <div class="card">@player1Hand[i]</div>
+                    } else {
+                        <div class="card" style="visibility: hidden;">&nbsp;</div>
+                    }
+                }
+                <div class="deck">
+                    <div class="card hidden-card">Осталось: @deckCount</div>
+                </div>
+            </div>
+
+            <!-- Центральные караваны -->
+            <div class="col-md-8">
+                <div class="row">
+                    <!-- Первый караван -->
+                    <div class="col-md-4 card-stack">
+                        @for (int i = 0; i < maxCaravanCards; i++) {
+                            if (i < caravan1enemy.Count) {
+                                <div class="card">@caravan1enemy[i]</div>
+                            } else {
+                                <div class="card" style="visibility: hidden;">&nbsp;</div>
+                            }
+                        }
+                    </div>
+
+                    <!-- Второй караван -->
+                    <div class="col-md-4 card-stack">
+                        @for (int i = 0; i < maxCaravanCards; i++) {
+                            if (i < caravan2enemy.Count) {
+                                <div class="card">@caravan2player[i]</div>
+                            } else {
+                                <div class="card" style="visibility: hidden;">&nbsp;</div>
+                            }
+                        }
+                    </div>
+
+                    <!-- Третий караван -->
+                    <div class="col-md-4 card-stack">
+                        @for (int i = 0; i < maxCaravanCards; i++) {
+                            if (i < caravan3enemy.Count) {
+                                <div class="card">@caravan3player[i]</div>
+                            } else {
+                                <div class="card" style="visibility: hidden;">&nbsp;</div>
+                            }
+                        }
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 card-stack">
+                        <h4>Караван 1</h4>
+                    </div>
+                    <div class="col-md-4 card-stack">
+                        <h4>Караван 2</h4>
+                    </div>
+                    <div class="col-md-4 card-stack">
+                        <h4>Караван 3</h4>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 card-stack">
+                        @for (int i = 0; i < maxCaravanCards; i++) {
+                            if (i < caravan1player.Count) {
+                                <div class="card">@caravan1player[i]</div>
+                            } else {
+                                <div class="card" style="visibility: hidden;">&nbsp;</div>
+                            }
+                        }
+                    </div>
+                    <div class="col-md-4 card-stack">
+                        @for (int i = 0; i < maxCaravanCards; i++) {
+                            if (i < caravan1player.Count) {
+                                <div class="card">@caravan1player[i]</div>
+                            } else {
+                                <div class="card" style="visibility: hidden;">&nbsp;</div>
+                            }
+                        }
+                    </div>
+                    <div class="col-md-4 card-stack">
+                        @for (int i = 0; i < maxCaravanCards; i++) {
+                            if (i < caravan1player.Count) {
+                                <div class="card">@caravan1player[i]</div>
+                            } else {
+                                <div class="card" style="visibility: hidden;">&nbsp;</div>
+                            }
+                        }
+                    </div>
+            </div>
+    </div>
+            <!-- Карты на руке Игрока 2 -->
+            <div class="col-md-2 hand-cards">
+                <h4>Карты Игрока 2</h4>
+                @for (int i = 0; i < maxHandCards; i++) {
+                    if (i < player2Hand.Count) {
+                        <div class="card">@player2Hand[i]</div>
+                    } else {
+                        <div class="card" style="visibility: hidden;">&nbsp;</div>
+                    }
+                }
+                <div class="deck">
+                    <div class="card hidden-card">Осталось: @deckCount</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

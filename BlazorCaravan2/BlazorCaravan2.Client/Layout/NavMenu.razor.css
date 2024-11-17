@@ -1,0 +1,56 @@
+
+/* Стили для фиксации иконки меню */
+.menuicon {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    font-size: 24px;
+    cursor: pointer;
+    color: #ffc90e;
+    z-index: 2;
+}
+
+/* Стили для сайдбара */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: -250px; /* Изначально скрыт за левым краем экрана */
+    width: 250px;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7); /* Прозрачный черный фон */
+    color: #ffffff;
+    padding-top: 60px; /* Отступ для иконки меню */
+    transition: 0.3s;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Стили для ссылок в сайдбаре */
+.sidebar a {
+    padding: 10px 20px;
+    text-decoration: none;
+    color: #ffc90e;
+    font-size: 18px;
+    transition: 0.3s;
+    position: relative;
+}
+
+/* При наведении добавляем квадратные скобки */
+.sidebar a:hover::before {
+    content: "[";
+/*    position: absolute;
+    left: 18px;*/
+}
+
+.sidebar a:hover::after {
+    content: "]";
+/*    position: absolute;
+    right: 35px;*/
+}
+
+/* Состояние сайдбара при открытии */
+.sidebar.active {
+    left: 0;
+}
+
+

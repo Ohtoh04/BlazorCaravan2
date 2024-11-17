@@ -1,0 +1,33 @@
+﻿@page "/jointable"
+@using BlazorCaravan2.Client.Services
+@inject GameHubService GameHub
+@inject NavigationManager NavigationManager
+
+<h3>JoinTable</h3>
+
+<EditForm OnSubmit="JoinTableSubmit">
+    <hr />
+    <div class="form-group row">
+        <label for="tableName" class="col-sm-3 col-form-label">
+            Session id
+        </label>
+        <div class="col-sm-9">
+            <InputText id="tablesessionid" class="form-control" placeholder=""
+            @bind-Value="SessionIdToConnect" />
+        </div>
+    </div>
+    <div class="text-center">
+        <input type="submit" class="btn btn-primary" Value="Confirm" />
+    </div>
+</EditForm>
+
+
+@code {
+    string SessionIdToConnect { get; set; } = "";
+
+    public void JoinTableSubmit()
+    {
+        string connectionroute = $"/gamesession/{SessionIdToConnect}";
+        NavigationManager.NavigateTo(connectionroute);
+    }
+}

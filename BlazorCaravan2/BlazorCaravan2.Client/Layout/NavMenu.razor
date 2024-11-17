@@ -1,0 +1,47 @@
+﻿
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <div class="menuicon" @onclick="ToggleSidebar">☰</div>
+    </div>
+</div>
+@* <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="counter">
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="weather">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
+            </NavLink>
+        </div>
+    </nav>
+</div> *@
+
+<div class="sidebar @(IsOpen ? "active" : "")">
+    <a href="#home">Home</a>
+    <a href="#about">About</a>
+    <a href="Caravan">Caravan</a>
+    <a href="#contact">Contact</a>
+</div>
+
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> OnToggle { get; set; }
+
+    private async Task ToggleSidebar() {
+        await OnToggle.InvokeAsync(!IsOpen);
+    }
+
+
+    private async Task OnMouseHoverOver() {
+        await OnToggle.InvokeAsync(!IsOpen);
+    }
+}
