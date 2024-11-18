@@ -168,13 +168,8 @@ namespace CaravanDomain.Models {
             return null; 
         }
 
-        public object GetGameState() {
-            // Returns a snapshot of the current game state for broadcasting
-            return new {
-                Players = this._players,
-                Turn = _players[_currentTurn],
-                // Include other game state information as needed
-            };
+        public Dictionary<string, PlayerState> GetGameState() {
+            return new Dictionary<string, PlayerState>(_playerStates);
         }
     }
 

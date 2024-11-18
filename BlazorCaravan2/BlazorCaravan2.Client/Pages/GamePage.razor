@@ -6,6 +6,7 @@
 @using CaravanDomain.Entities;
 @using Microsoft.AspNetCore.SignalR.Client;
 
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager Navigation
 @inject GameHubService GameHub
 
@@ -21,13 +22,20 @@
     List<string> caravan1player = new List<string> { "5♦", "7♠", "8♣" };           // Первый караван
 
     protected HubConnection? HubConnection;
-    protected string PlayerId = Guid.NewGuid().ToString();
+    protected string PlayerId = string.Empty;
 
     protected bool IsConnected = false;
     protected string Message = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity != null && user.Identity.IsAuthenticated)
+        {
+            PlayerId = user.FindFirst("sub")?.Value ?? user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        }
+
         HubConnection = new HubConnectionBuilder()
            .WithUrl("/caravanhub")
            .Build();
@@ -37,12 +45,33 @@
             // Обновление данных после хода
             StateHasChanged();
         });
+        HubConnection.On<string, string>("GameStarted", (playerId, gameStateJson) =>
+        {
+            // Обновление данных после хода
+            StateHasChanged();
+        });
+        HubConnection.On<string, string>("CardDrawn", (playerId, gameStateJson) =>
+        {
+            // Обновление данных после хода
+            StateHasChanged();
+        });
+        HubConnection.On<string, string>("TurnEnded", (playerId, gameStateJson) =>
+        {
+        // Обновление данных после хода
+        StateHasChanged();
+        });
+        HubConnection.On<string, string>("PlayerJoined", (playerId, gameStateJson) =>
+        {
+            // Обновление данных после хода
+            StateHasChanged();
+        });
+
 
         await HubConnection.StartAsync();
         IsConnected = true;
 
         // Присоединение к игре
-        SessionId = await HubConnection.InvokeAsync<string>("JoinGame", PlayerId);
+        await HubConnection.InvokeAsync("JoinGame", SessionId, PlayerId);
         Message = "Waiting for another player to join...";
         StateHasChanged();
     }

@@ -11,7 +11,6 @@ using CaravanDomain.Models;
 using System.Collections.Concurrent;
 
 namespace BlazorCaravan2.Hubs {
-
     public class CaravanHub : Hub {
         private static ConcurrentDictionary<string, GameSession> Sessions = new ConcurrentDictionary<string, GameSession>();
 
