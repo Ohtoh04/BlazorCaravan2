@@ -1,4 +1,4 @@
-﻿@page "/caravan"
+﻿@page "/caravan/{SessionId}"
 
 @using System.Collections.Generic
 @using BlazorCaravan2.Client.Services
@@ -8,7 +8,8 @@
 
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager Navigation
-@inject GameHubService GameHub
+
+
 
 @code {
     [Parameter]
@@ -18,11 +19,10 @@
     int maxCaravanCards = 10;
 
     // Данные для карт
-    List<string> player1Hand = new List<string> { "10♠", "2♥", "K♣", "3♦" }; // Карты на руке у игрока 1
-    List<string> caravan1player = new List<string> { "5♦", "7♠", "8♣" };           // Первый караван
 
+    private GameState? _gameState { get; set; }
     protected HubConnection? HubConnection;
-    protected string PlayerId = string.Empty;
+    protected string[] PlayerIds = new string[2];
 
     protected bool IsConnected = false;
     protected string Message = string.Empty;
@@ -33,36 +33,43 @@
         var user = authState.User;
         if (user.Identity != null && user.Identity.IsAuthenticated)
         {
-            PlayerId = user.FindFirst("sub")?.Value ?? user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            PlayerIds[0] = user.FindFirst("sub")?.Value ?? user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         }
 
         HubConnection = new HubConnectionBuilder()
            .WithUrl("/caravanhub")
            .Build();
 
-        HubConnection.On<string, string>("CardPlayed", (playerId, gameStateJson) =>
+        HubConnection.On<GameState>("CardPlayed", (receivedGameState) =>
         {
-            // Обновление данных после хода
+            _gameState = receivedGameState;
             StateHasChanged();
         });
-        HubConnection.On<string, string>("GameStarted", (playerId, gameStateJson) =>
+        HubConnection.On<string, GameState>("GameStarted", (sessionId, receivedGameState) =>
         {
-            // Обновление данных после хода
+            SessionId = sessionId;
+            _gameState = receivedGameState;
             StateHasChanged();
         });
-        HubConnection.On<string, string>("CardDrawn", (playerId, gameStateJson) =>
+        HubConnection.On<GameState>("CardDrawn", (receivedGameState) =>
         {
-            // Обновление данных после хода
+            _gameState = receivedGameState;
+
             StateHasChanged();
         });
-        HubConnection.On<string, string>("TurnEnded", (playerId, gameStateJson) =>
+        HubConnection.On<GameState>("TurnEnded", (receivedGameState) =>
         {
-        // Обновление данных после хода
-        StateHasChanged();
+            _gameState = receivedGameState;
+            StateHasChanged();
         });
-        HubConnection.On<string, string>("PlayerJoined", (playerId, gameStateJson) =>
+        HubConnection.On<string>("PlayerJoined", (playerId) =>
         {
-            // Обновление данных после хода
+            PlayerIds[1] = playerId;
+            StateHasChanged();
+        });
+        HubConnection.On<string>("GameOver", (winner) =>
+        {
+            // winner is a player id
             StateHasChanged();
         });
 
@@ -71,7 +78,7 @@
         IsConnected = true;
 
         // Присоединение к игре
-        await HubConnection.InvokeAsync("JoinGame", SessionId, PlayerId);
+        await HubConnection.InvokeAsync("JoinGame", SessionId, PlayerIds[0]);
         Message = "Waiting for another player to join...";
         StateHasChanged();
     }
@@ -80,7 +87,7 @@
     {
         if (HubConnection != null)
         {
-            await HubConnection.InvokeAsync("PlayCard", SessionId, PlayerId, card, caravanIndex);
+            await HubConnection.InvokeAsync("PlayCard", SessionId, PlayerIds[0], card, caravanIndex);
         }
     }
 
@@ -112,9 +119,9 @@
         <!-- Карты на руке Игрока 1 -->
         <div class="col-md-2 hand-cards">
             <h4>Ваши карты</h4>
-            @foreach (var card in player1Hand)
+            @foreach (var card in _gameState.YourHand)
             {
-                <div class="card" draggable="true" @ondragstart="e => OnDragStart(card, e)">
+                <div class="card" draggable="true" @ondragstart="e => OnDragStart(card.ToString(), e)">
                     @card
                 </div>
             }
@@ -126,7 +133,7 @@
                 <!-- Первый караван (врага) -->
                 <div class="col-md-4 card-stack enemy-stack">
                     <h5 class="text-center">Караван 1 (Враг)</h5>
-                    @foreach (var card in caravan1enemy)
+                    @foreach (var card in _gameState.OpponentCaravans[0].Cards)
                     {
                         <div class="card">@card</div>
                     }
@@ -135,7 +142,7 @@
                 <!-- Второй караван (врага) -->
                 <div class="col-md-4 card-stack enemy-stack">
                     <h5 class="text-center">Караван 2 (Враг)</h5>
-                    @foreach (var card in caravan2enemy)
+                    @foreach (var card in _gameState.OpponentCaravans[1].Cards)
                     {
                         <div class="card">@card</div>
                     }
@@ -144,7 +151,7 @@
                 <!-- Третий караван (врага) -->
                 <div class="col-md-4 card-stack enemy-stack">
                     <h5 class="text-center">Караван 3 (Враг)</h5>
-                    @foreach (var card in caravan3enemy)
+                    @foreach (var card in _gameState.OpponentCaravans[2].Cards)
                     {
                         <div class="card">@card</div>
                     }
@@ -155,7 +162,7 @@
                 <!-- Первый караван (игрока) -->
                 <div class="col-md-4 card-stack" @ondragover="e => e.PreventDefault()" @ondrop="e => OnDrop(0, e)">
                     <h5 class="text-center">Караван 1 (Вы)</h5>
-                    @foreach (var card in caravan1player)
+                    @foreach (var card in _gameState.YourCaravans[0].Cards)
                     {
                         <div class="card">@card</div>
                     }
@@ -164,7 +171,7 @@
                 <!-- Второй караван (игрока) -->
                 <div class="col-md-4 card-stack" @ondragover="e => e.PreventDefault()" @ondrop="e => OnDrop(1, e)">
                     <h5 class="text-center">Караван 2 (Вы)</h5>
-                    @foreach (var card in caravan2player)
+                    @foreach (var card in _gameState.YourCaravans[1].Cards)
                     {
                         <div class="card">@card</div>
                     }
@@ -173,7 +180,7 @@
                 <!-- Третий караван (игрока) -->
                 <div class="col-md-4 card-stack" @ondragover="e => e.PreventDefault()" @ondrop="e => OnDrop(2, e)">
                     <h5 class="text-center">Караван 3 (Вы)</h5>
-                    @foreach (var card in caravan3player)
+                    @foreach (var card in _gameState.YourCaravans[2].Cards)
                     {
                         <div class="card">@card</div>
                     }
@@ -182,14 +189,14 @@
         </div>
 
         <!-- Карты на руке Игрока 2 -->
-        <div class="col-md-2 hand-cards">
+@*         <div class="col-md-2 hand-cards">
             <h4>Карты противника</h4>
-            @foreach (var card in player2Hand)
+            @foreach (var card in _gameState.YourHand.Cards)
             {
                 <div class="card">
                     @card
                 </div>
             }
-        </div>
+        </div> *@
     </div>
 </div>

@@ -41,12 +41,17 @@ namespace BlazorCaravan2.Hubs {
                 await Clients.Group(sessionId).SendAsync("GameStarted", sessionId, session.GetGameState());
             }
         }
+        public async Task CreateGame(string sessionId) {
+            GameSession gameSession = new GameSession();
+            Sessions.GetOrAdd(sessionId, gameSession);
+            await Clients.Group(sessionId).SendAsync("GameCreated", sessionId);
+        }
 
         // Play a card
         public async Task PlayCard(string sessionId, string playerId, Card card, int caravanIndex) {
             if (Sessions.TryGetValue(sessionId, out var session) && session.IsPlayerTurn(playerId)) {
                 session.PlayCard(playerId, card, caravanIndex);
-                await Clients.Group(sessionId).SendAsync("CardPlayed", playerId, card, session.GetGameState());
+                await Clients.Group(sessionId).SendAsync("CardPlayed", session.GetGameState());
 
                 if (session.IsGameOver()) {
                     var winner = session.GetWinner();
