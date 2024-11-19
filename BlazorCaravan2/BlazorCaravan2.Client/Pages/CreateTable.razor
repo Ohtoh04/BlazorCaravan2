@@ -25,7 +25,7 @@
     protected override async Task OnInitializedAsync()
     {
         HubConnection = new HubConnectionBuilder()
-            .WithUrl(Navigation.ToAbsoluteUri("/gamehub"))
+            .WithUrl(Navigation.ToAbsoluteUri("/caravanhub"))
             .WithAutomaticReconnect()
             .Build();
 

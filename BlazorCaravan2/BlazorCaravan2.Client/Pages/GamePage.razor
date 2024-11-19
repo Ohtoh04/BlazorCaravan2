@@ -101,16 +101,16 @@
 
     void OnDragStart(string card, DragEventArgs e)
     {
-        e.DataTransfer.SetData("text/plain", card);
+        //e.DataTransfer.SetData("text/plain", card);
     }
 
     async Task OnDrop(int caravanIndex, DragEventArgs e)
     {
-        var card = e.DataTransfer.GetData("text/plain");
-        if (!string.IsNullOrEmpty(card))
-        {
-            await PlayCard(card, caravanIndex);
-        }
+        // var card = e.DataTransfer.GetData("text/plain");
+        // if (!string.IsNullOrEmpty(card))
+        // {
+        //     await PlayCard(card, caravanIndex);
+        // }
     }
 }
 
@@ -160,7 +160,7 @@
 
             <div class="row mt-4">
                 <!-- Первый караван (игрока) -->
-                <div class="col-md-4 card-stack" @ondragover="e => e.PreventDefault()" @ondrop="e => OnDrop(0, e)">
+                <div class="col-md-4 card-stack" @ondrop="e => OnDrop(0, e)">
                     <h5 class="text-center">Караван 1 (Вы)</h5>
                     @foreach (var card in _gameState.YourCaravans[0].Cards)
                     {
@@ -169,7 +169,7 @@
                 </div>
 
                 <!-- Второй караван (игрока) -->
-                <div class="col-md-4 card-stack" @ondragover="e => e.PreventDefault()" @ondrop="e => OnDrop(1, e)">
+                <div class="col-md-4 card-stack" @ondrop="e => OnDrop(1, e)">
                     <h5 class="text-center">Караван 2 (Вы)</h5>
                     @foreach (var card in _gameState.YourCaravans[1].Cards)
                     {
@@ -178,7 +178,7 @@
                 </div>
 
                 <!-- Третий караван (игрока) -->
-                <div class="col-md-4 card-stack" @ondragover="e => e.PreventDefault()" @ondrop="e => OnDrop(2, e)">
+                <div class="col-md-4 card-stack" @ondrop="e => OnDrop(2, e)">
                     <h5 class="text-center">Караван 3 (Вы)</h5>
                     @foreach (var card in _gameState.YourCaravans[2].Cards)
                     {

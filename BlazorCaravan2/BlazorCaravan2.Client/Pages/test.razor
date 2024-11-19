@@ -1,0 +1,14 @@
+﻿@page "/test"
+
+<h3>Test Button</h3>
+<button @onclick="TestClick">@tststring</button>
+
+@code {
+    private string tststring = "clickme";
+
+    private void TestClick()
+    {
+        tststring = "jopa";
+        StateHasChanged(); 
+    }
+}
