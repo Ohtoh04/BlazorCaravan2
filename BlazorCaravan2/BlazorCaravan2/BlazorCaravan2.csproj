@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\BlazorCaravan2.Domain\BlazorCaravan2.Domain.csproj" />
     <ProjectReference Include="..\BlazorCaravan2.Client\BlazorCaravan2.Client.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Certificate" Version="8.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.10" />

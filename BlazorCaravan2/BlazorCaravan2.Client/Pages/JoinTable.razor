@@ -1,32 +1,31 @@
 ﻿@page "/jointable"
+@rendermode InteractiveAuto
 @using BlazorCaravan2.Client.Services
 
 @inject NavigationManager NavigationManager
 
 <h3>JoinTable</h3>
 
-<EditForm Model="formModel" OnValidSubmit="JoinTableSubmit">
-    <hr />
-    <div class="form-group row">
-        <label for="tableName" class="col-sm-3 col-form-label">
-            Session id
-        </label>
-        <div class="col-sm-9">
-            <InputText id="tablesessionid" class="form-control" placeholder=""
-                       @bind-Value="formModel.SessionIdToConnect" />
-        </div>
+
+<div class="form-group row">
+    <label for="tableName" class="col-sm-3 col-form-label">
+        Session id
+    </label>
+    <div class="col-sm-9">
+        <InputText id="tablesessionid" class="form-control" placeholder=""
+                    @bind-Value="formModel.SessionIdToConnect" />
     </div>
-    <div class="text-center">
-        <input type="submit" class="btn btn-primary" Value="Confirm" />
-    </div>
-</EditForm>
+</div>
+<div class="text-center">
+    <button @onclick="JoinTableSubmit">Confirm</button>
+</div>
 
 @code {
     private JoinTableModel formModel = new JoinTableModel();
 
     private void JoinTableSubmit()
     {
-        string connectionroute = $"/gamesession/{formModel.SessionIdToConnect}";
+        string connectionroute = $"/caravan/{formModel.SessionIdToConnect}";
         NavigationManager.NavigateTo(connectionroute);
     }
 

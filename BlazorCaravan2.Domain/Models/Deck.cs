@@ -25,7 +25,7 @@ namespace CaravanDomain.Models {
             _deck = new List<Card>(_deck.OrderBy(a => rand.Next()));
         }
 
-        public Card Draw() {
+        public Card? Draw() {
             if (_deck.Count == 0) return null;
             var card = _deck[0];
             _deck.RemoveAt(0);

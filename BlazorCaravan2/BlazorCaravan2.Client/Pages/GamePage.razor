@@ -18,11 +18,16 @@
     int maxHandCards = 8;
     int maxCaravanCards = 10;
 
+    private bool player1Ready = false;
+    private bool player2Ready = false;
+
     // Данные для карт
 
     private GameState? _gameState { get; set; }
     protected HubConnection? HubConnection;
-    protected string[] PlayerIds = new string[2];
+    protected string YourId { get; set; } = string.Empty;
+    protected string OpponentsId { get; set; } = string.Empty;
+
 
     protected bool IsConnected = false;
     protected string Message = string.Empty;
@@ -33,11 +38,11 @@
         var user = authState.User;
         if (user.Identity != null && user.Identity.IsAuthenticated)
         {
-            PlayerIds[0] = user.FindFirst("sub")?.Value ?? user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            YourId = user.FindFirst("sub")?.Value ?? user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         }
 
         HubConnection = new HubConnectionBuilder()
-           .WithUrl("/caravanhub")
+           .WithUrl(Navigation.ToAbsoluteUri("/caravanhub"))
            .Build();
 
         HubConnection.On<GameState>("CardPlayed", (receivedGameState) =>
@@ -64,7 +69,7 @@
         });
         HubConnection.On<string>("PlayerJoined", (playerId) =>
         {
-            PlayerIds[1] = playerId;
+            OpponentsId = playerId;
             StateHasChanged();
         });
         HubConnection.On<string>("GameOver", (winner) =>
@@ -78,7 +83,7 @@
         IsConnected = true;
 
         // Присоединение к игре
-        await HubConnection.InvokeAsync("JoinGame", SessionId, PlayerIds[0]);
+        await HubConnection.InvokeAsync("JoinGame", SessionId, YourId);
         Message = "Waiting for another player to join...";
         StateHasChanged();
     }
@@ -87,7 +92,7 @@
     {
         if (HubConnection != null)
         {
-            await HubConnection.InvokeAsync("PlayCard", SessionId, PlayerIds[0], card, caravanIndex);
+            await HubConnection.InvokeAsync("PlayCard", SessionId, YourId, card, caravanIndex);
         }
     }
 
@@ -112,91 +117,175 @@
         //     await PlayCard(card, caravanIndex);
         // }
     }
+
+
+
+    private async Task PlayerReady(ChangeEventArgs e)
+    {
+        if (YourId == null || OpponentsId == null)
+        {
+            return;
+        }
+
+        // Определяем, какой игрок готов
+        if ((bool)e.Value)
+        {
+            if (HubConnection != null)
+            {
+                // Сигнализируем готовность через хаб
+                await HubConnection.InvokeAsync("PlayerReady", SessionId, YourId);
+            }
+        }
+
+        // Если оба игрока готовы, запускаем игру
+        if (player1Ready && player2Ready)
+        {
+            if (HubConnection != null)
+            {
+                await HubConnection.InvokeAsync("StartGame", SessionId);
+                Message = "Game is starting!";
+                StateHasChanged();
+            }
+        }
+    }
 }
 
-<div class="container mt-4">
-    <div class="row">
-        <!-- Карты на руке Игрока 1 -->
-        <div class="col-md-2 hand-cards">
-            <h4>Ваши карты</h4>
-            @foreach (var card in _gameState.YourHand)
-            {
-                <div class="card" draggable="true" @ondragstart="e => OnDragStart(card.ToString(), e)">
-                    @card
-                </div>
-            }
-        </div>
+@if(_gameState is not null) {
+    <div class="container mt-4">
+        <div class="row">
+            <!-- Карты на руке Игрока 1 -->
+            <div class="col-md-2 hand-cards">
+                <h4>Ваши карты</h4>
+                @foreach (var card in _gameState.YourHand)
+                {
+                    <div class="card" draggable="true" @ondragstart="e => OnDragStart(card.ToString(), e)">
+                        @card
+                    </div>
+                }
+            </div>
 
-        <!-- Центральные караваны -->
-        <div class="col-md-8">
-            <div class="row">
-                <!-- Первый караван (врага) -->
-                <div class="col-md-4 card-stack enemy-stack">
-                    <h5 class="text-center">Караван 1 (Враг)</h5>
-                    @foreach (var card in _gameState.OpponentCaravans[0].Cards)
-                    {
-                        <div class="card">@card</div>
-                    }
+            <!-- Центральные караваны -->
+            <div class="col-md-8">
+                <div class="row">
+                    <!-- Первый караван (врага) -->
+                    <div class="col-md-4 card-stack enemy-stack">
+                        <h5 class="text-center">Караван 1 (Враг)</h5>
+                        @foreach (var card in _gameState.OpponentCaravans[0].Cards)
+                        {
+                            <div class="card">@card</div>
+                        }
+                    </div>
+
+                    <!-- Второй караван (врага) -->
+                    <div class="col-md-4 card-stack enemy-stack">
+                        <h5 class="text-center">Караван 2 (Враг)</h5>
+                        @foreach (var card in _gameState.OpponentCaravans[1].Cards)
+                        {
+                            <div class="card">@card</div>
+                        }
+                    </div>
+
+                    <!-- Третий караван (врага) -->
+                    <div class="col-md-4 card-stack enemy-stack">
+                        <h5 class="text-center">Караван 3 (Враг)</h5>
+                        @foreach (var card in _gameState.OpponentCaravans[2].Cards)
+                        {
+                            <div class="card">@card</div>
+                        }
+                    </div>
                 </div>
 
-                <!-- Второй караван (врага) -->
-                <div class="col-md-4 card-stack enemy-stack">
-                    <h5 class="text-center">Караван 2 (Враг)</h5>
-                    @foreach (var card in _gameState.OpponentCaravans[1].Cards)
-                    {
-                        <div class="card">@card</div>
-                    }
-                </div>
+                <div class="row mt-4">
+                    <!-- Первый караван (игрока) -->
+                    <div class="col-md-4 card-stack" @ondrop="e => OnDrop(0, e)">
+                        <h5 class="text-center">Караван 1 (Вы)</h5>
+                        @foreach (var card in _gameState.YourCaravans[0].Cards)
+                        {
+                            <div class="card">@card</div>
+                        }
+                    </div>
 
-                <!-- Третий караван (врага) -->
-                <div class="col-md-4 card-stack enemy-stack">
-                    <h5 class="text-center">Караван 3 (Враг)</h5>
-                    @foreach (var card in _gameState.OpponentCaravans[2].Cards)
-                    {
-                        <div class="card">@card</div>
-                    }
+                    <!-- Второй караван (игрока) -->
+                    <div class="col-md-4 card-stack" @ondrop="e => OnDrop(1, e)">
+                        <h5 class="text-center">Караван 2 (Вы)</h5>
+                        @foreach (var card in _gameState.YourCaravans[1].Cards)
+                        {
+                            <div class="card">@card</div>
+                        }
+                    </div>
+
+                    <!-- Третий караван (игрока) -->
+                    <div class="col-md-4 card-stack" @ondrop="e => OnDrop(2, e)">
+                        <h5 class="text-center">Караван 3 (Вы)</h5>
+                        @foreach (var card in _gameState.YourCaravans[2].Cards)
+                        {
+                            <div class="card">@card</div>
+                        }
+                    </div>
                 </div>
             </div>
 
-            <div class="row mt-4">
-                <!-- Первый караван (игрока) -->
-                <div class="col-md-4 card-stack" @ondrop="e => OnDrop(0, e)">
-                    <h5 class="text-center">Караван 1 (Вы)</h5>
-                    @foreach (var card in _gameState.YourCaravans[0].Cards)
-                    {
-                        <div class="card">@card</div>
-                    }
-                </div>
-
-                <!-- Второй караван (игрока) -->
-                <div class="col-md-4 card-stack" @ondrop="e => OnDrop(1, e)">
-                    <h5 class="text-center">Караван 2 (Вы)</h5>
-                    @foreach (var card in _gameState.YourCaravans[1].Cards)
-                    {
-                        <div class="card">@card</div>
-                    }
-                </div>
-
-                <!-- Третий караван (игрока) -->
-                <div class="col-md-4 card-stack" @ondrop="e => OnDrop(2, e)">
-                    <h5 class="text-center">Караван 3 (Вы)</h5>
-                    @foreach (var card in _gameState.YourCaravans[2].Cards)
-                    {
-                        <div class="card">@card</div>
-                    }
-                </div>
-            </div>
+            <!-- Карты на руке Игрока 2 -->
+    @*         <div class="col-md-2 hand-cards">
+                <h4>Карты противника</h4>
+                @foreach (var card in _gameState.YourHand.Cards)
+                {
+                    <div class="card">
+                        @card
+                    </div>
+                }
+            </div> *@
         </div>
-
-        <!-- Карты на руке Игрока 2 -->
-@*         <div class="col-md-2 hand-cards">
-            <h4>Карты противника</h4>
-            @foreach (var card in _gameState.YourHand.Cards)
-            {
-                <div class="card">
-                    @card
-                </div>
-            }
-        </div> *@
     </div>
-</div>
+} 
+else {
+    <div class="container text-center mt-5">
+        <h2>Waiting for players...</h2>
+        <div class="row justify-content-center">
+            <div class="col-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Player 1</h5>
+                        <p class="card-text">
+                            @if (!string.IsNullOrEmpty(YourId))
+                            {
+                                <span>@YourId</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Waiting for Player 1...</span>
+                            }
+                        </p>
+                        @if (!string.IsNullOrEmpty(YourId))
+                        {
+
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Player 2</h5>
+                        <p class="card-text">
+                            @if (!string.IsNullOrEmpty(OpponentsId))
+                            {
+                                <span>@OpponentsId</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Waiting for Player 2...</span>
+                            }
+                        </p>
+                        @if (!string.IsNullOrEmpty(OpponentsId))
+                        {
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-3">
+            <p>@Message</p>
+        </div>
+    </div>
+}

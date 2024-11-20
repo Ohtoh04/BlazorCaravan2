@@ -9,7 +9,6 @@ namespace CaravanDomain.Models {
     public class PlayerState {
         public List<Card> Hand = new List<Card>();
         public List<Caravan> Caravans = new List<Caravan>();
-
         public void PlayCard(Card card) {
             Hand.Remove(card);
             // Additional logic to place card on a caravan
