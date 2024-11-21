@@ -37,9 +37,10 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 
 builder.Services.AddCors(options => {
     options.AddPolicy("AllowSpecificOrigins",
-        policy => policy.AllowAnyOrigin()
+        policy => policy.WithOrigins("http://192.168.100.65:5094")
                         .AllowAnyHeader()
-                        .AllowAnyMethod());
+                        .AllowAnyMethod()
+                        .AllowCredentials());
 });
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();

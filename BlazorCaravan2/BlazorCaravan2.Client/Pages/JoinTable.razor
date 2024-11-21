@@ -12,8 +12,8 @@
         Session id
     </label>
     <div class="col-sm-9">
-        <InputText id="tablesessionid" class="form-control" placeholder=""
-                    @bind-Value="formModel.SessionIdToConnect" />
+        <input id="tablesessionid" placeholder=""
+                    @bind="SessionIdToConnect" />
     </div>
 </div>
 <div class="text-center">
@@ -21,16 +21,14 @@
 </div>
 
 @code {
-    private JoinTableModel formModel = new JoinTableModel();
+    public string SessionIdToConnect { get; set; } = "";
 
     private void JoinTableSubmit()
     {
-        string connectionroute = $"/caravan/{formModel.SessionIdToConnect}";
+        string connectionroute = $"/caravan/{SessionIdToConnect}";
         NavigationManager.NavigateTo(connectionroute);
     }
 
-    public class JoinTableModel
-    {
-        public string SessionIdToConnect { get; set; } = "";
-    }
+
+    
 }

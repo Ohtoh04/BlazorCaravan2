@@ -9,6 +9,9 @@ namespace CaravanDomain.Models {
     public class Deck {
         private List<Card> _deck = new List<Card>();
 
+        public int Count {
+            get { return _deck.Count; }
+        }
         public Deck() {
             foreach (CardRank cardRank in Enum.GetValues(typeof(CardRank))) {
                 foreach (CardSuit cardSuit in Enum.GetValues(typeof(CardSuit))) {

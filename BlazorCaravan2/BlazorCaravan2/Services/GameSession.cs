@@ -7,40 +7,39 @@ using System.Threading.Tasks;
 
 namespace CaravanDomain.Models {
     public class GameSession {
-        private Deck _deck;
-        private List<string> _players = new List<string>();
-        private Dictionary<string, PlayerState> _playerStates = new Dictionary<string, PlayerState>();
+        public List<string> Players { get; set; } = new List<string>();
+        private Dictionary<string, PlayerState> Playerstates = new Dictionary<string, PlayerState>();
         private int _currentTurn = 0;
 
         public void AddPlayer(string playerId) {
-            if (_players.Count < 2) {
-                _players.Add(playerId);
-                _playerStates[playerId] = new PlayerState();
+            if (Players.Count < 2 && !Players.Contains(playerId)) {
+                Players.Add(playerId);
+                Playerstates[playerId] = new PlayerState();
             }
         }
 
-        public bool CanStart() => _players.Count == 2;
+        public bool CanStart() => Players.Count == 2;
 
         public void StartGame() {
-            _deck = new Deck();
-            _deck.Shuffle();
-
+            foreach (var playerpair in Playerstates) {
+                playerpair.Value.Deck.Shuffle();
+            }
             // Deal initial hand to each player
-            foreach (var playerId in _players) {
-                var playerState = _playerStates[playerId];
+            foreach (var playerId in Players) {
+                var playerState = Playerstates[playerId];
                 for (int i = 0; i < 8; i++) {
-                    playerState.Hand.Add(_deck.Draw());
+                    playerState.Hand.Add(playerState.Deck.Draw());
                 }
             }
         }
 
         public bool IsPlayerTurn(string playerId) {
-            return _players[_currentTurn] == playerId;
+            return Players[_currentTurn] == playerId;
         }
 
         public void PlayCard(string playerId, Card card, int caravanIndex) {
             if (IsPlayerTurn(playerId)) {
-                var playerState = _playerStates[playerId];
+                var playerState = Playerstates[playerId];
                 if (!playerState.Hand.Contains(card)) return;
 
                 playerState.Hand.Remove(card);
@@ -99,11 +98,11 @@ namespace CaravanDomain.Models {
         }
 
         public Card DrawCard(string playerId) {
-            return _playerStates[playerId].DrawCard();
+            return Playerstates[playerId].DrawCard();
         }
 
         public void EndTurn() {
-            _currentTurn = (_currentTurn + 1) % _players.Count;
+            _currentTurn = (_currentTurn + 1) % Players.Count;
         }
 
         public bool IsGameOver() {
@@ -112,8 +111,8 @@ namespace CaravanDomain.Models {
 
             // Check each of the three caravans
             for (int i = 0; i < 3; i++) {
-                var player1Caravan = _playerStates[_players[0]].Caravans[i];
-                var player2Caravan = _playerStates[_players[1]].Caravans[i];
+                var player1Caravan = Playerstates[Players[0]].Caravans[i];
+                var player2Caravan = Playerstates[Players[1]].Caravans[i];
 
                 // Check if each player's caravan is "sold" (i.e., within 21-26 range)
                 bool player1Sold = IsCaravanSold(player1Caravan);
@@ -150,8 +149,8 @@ namespace CaravanDomain.Models {
 
             // Count sold caravans again to determine winner
             for (int i = 0; i < 3; i++) {
-                var player1Caravan = _playerStates[_players[0]].Caravans[i];
-                var player2Caravan = _playerStates[_players[1]].Caravans[i];
+                var player1Caravan = Playerstates[Players[0]].Caravans[i];
+                var player2Caravan = Playerstates[Players[1]].Caravans[i];
 
                 bool player1Sold = IsCaravanSold(player1Caravan);
                 bool player2Sold = IsCaravanSold(player2Caravan);
@@ -161,15 +160,21 @@ namespace CaravanDomain.Models {
                 if (player2Sold) player2SoldCount++;
             }
 
-            if (player1SoldCount >= 2) return _players[0];
-            if (player2SoldCount >= 2) return _players[1];
+            if (player1SoldCount >= 2) return Players[0];
+            if (player2SoldCount >= 2) return Players[1];
 
             // Null if both caravans are sold
             return null; 
         }
 
-        public Dictionary<string, PlayerState> GetGameState() {
-            return new Dictionary<string, PlayerState>(_playerStates);
+        //public Dictionary<string, PlayerState> GetGameState() {
+        //    return new Dictionary<string, PlayerState>(Playerstates);
+        //}
+        public GameState GetGameState(string playerId) {
+            return new GameState(Playerstates[playerId].Hand,//your hand
+                Playerstates[playerId].Caravans, Playerstates[Players.First(p => p != playerId)].Caravans, //yours and opponents caravans
+                Playerstates[Players.First(p => p != playerId)].Hand.Count,//opponents hand count
+                Playerstates[playerId].Deck.Count, Playerstates[Players.First(p => p != playerId)].Deck.Count);//yours and opponents deck count
         }
     }
 

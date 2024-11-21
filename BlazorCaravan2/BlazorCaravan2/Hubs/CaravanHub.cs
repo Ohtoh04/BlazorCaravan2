@@ -24,7 +24,7 @@ namespace BlazorCaravan2.Hubs {
                 await Clients.Caller.SendAsync("GameJoined", sessionId, playerId);
 
                 // Notify other players in the session
-                await Clients.Group(sessionId).SendAsync("PlayerJoined", playerId);
+                await Clients.Group(sessionId).SendAsync("PlayerJoined", Sessions[sessionId].Players);
 
                 // Add the player to the SignalR group for the session
                 await Groups.AddToGroupAsync(Context.ConnectionId, sessionId);
