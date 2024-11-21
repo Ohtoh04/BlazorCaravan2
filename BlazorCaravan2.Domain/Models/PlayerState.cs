@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace CaravanDomain.Models {
     public class PlayerState {
         public List<Card> Hand { get; set; } = new List<Card>();
-        public List<Caravan> Caravans { get; set; } = new List<Caravan>();
+        public List<Caravan> Caravans { get; set; } = new List<Caravan>() { new Caravan(), new Caravan(), new Caravan() };
         public Deck Deck { get; set; } = new Deck();
         public void PlayCard(Card card) {
             Hand.Remove(card);
