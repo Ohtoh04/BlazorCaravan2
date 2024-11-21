@@ -113,8 +113,48 @@
         }
     }
 
-    public async Task<string> GetCardImage(Card card) {
-        return "";
+    public string GetCardImagePath(Card card)
+    {
+        // Base path for the card images
+        const string basePath = "Images/deckg/";
+
+        // If the card is a Joker
+        if (card.CardNumber == CardRank.Joker)
+        {
+            return $"{basePath}cardg_joker.png"; // Assuming the Joker has a specific filename
+        }
+
+        // Map suits to their corresponding letters
+        string suitLetter = card.CardSuit switch
+        {
+            CardSuit.Clubs => "c",
+            CardSuit.Diamonds => "d",
+            CardSuit.Hearts => "h",
+            CardSuit.Spades => "s",
+            _ => throw new ArgumentOutOfRangeException()
+        };
+
+        // Get the rank number (Ace = 1, Two = 2, ..., King = 13)
+        int rankNumber = card.CardNumber switch
+        {
+            CardRank.Ace => 1,
+            CardRank.Two => 2,
+            CardRank.Three => 3,
+            CardRank.Four => 4,
+            CardRank.Five => 5,
+            CardRank.Six => 6,
+            CardRank.Seven => 7,
+            CardRank.Eight => 8,
+            CardRank.Nine => 9,
+            CardRank.Ten => 10,
+            CardRank.Jack => 11,
+            CardRank.Queen => 12,
+            CardRank.King => 13,
+            _ => throw new ArgumentOutOfRangeException()
+        };
+
+        // Construct the filename
+        return $"{basePath}cardg_{suitLetter}{rankNumber:D2}.png";
     }
 
     public async ValueTask DisposeAsync()
@@ -174,88 +214,72 @@
 @if(_gameState is not null) {
     <div class="container mt-4">
         <div class="row">
-            <!-- Карты на руке Игрока 1 -->
+            <!-- Your Hand -->
             <div class="col-md-2 hand-cards">
                 <h4>Ваши карты</h4>
                 @foreach (var card in _gameState.YourHand)
                 {
                     <div class="card" draggable="true" @ondragstart="e => OnDragStart(card.ToString(), e)">
-                        @card
+                        <img src="@GetCardImagePath(card)" alt="@card.CardNumber @card.CardSuit" />
                     </div>
                 }
             </div>
 
-            <!-- Центральные караваны -->
+            <!-- Central Caravans -->
             <div class="col-md-8">
                 <div class="row">
-                    <!-- Первый караван (врага) -->
-                    <div class="col-md-4 card-stack enemy-stack">
-                        <h5 class="text-center">Караван 1 (Враг)</h5>
-                        @foreach (var card in _gameState.OpponentCaravans[0].Cards)
-                        {
-                            <div class="card">@card</div>
-                        }
-                    </div>
-
-                    <!-- Второй караван (врага) -->
-                    <div class="col-md-4 card-stack enemy-stack">
-                        <h5 class="text-center">Караван 2 (Враг)</h5>
-                        @foreach (var card in _gameState.OpponentCaravans[1].Cards)
-                        {
-                            <div class="card">@card</div>
-                        }
-                    </div>
-
-                    <!-- Третий караван (врага) -->
-                    <div class="col-md-4 card-stack enemy-stack">
-                        <h5 class="text-center">Караван 3 (Враг)</h5>
-                        @foreach (var card in _gameState.OpponentCaravans[2].Cards)
-                        {
-                            <div class="card">@card</div>
-                        }
-                    </div>
+                    <!-- Opponent Caravans -->
+                    @for (int i = 0; i < 3; i++)
+                    {
+                        <div class="col-md-4 card-stack enemy-stack">
+                            <h5 class="text-center">@($"Opponent Caravan {i + 1}")</h5>
+                            @foreach (var card in _gameState.OpponentCaravans[i].Cards)
+                            {
+                                <div class="card">
+                                    <img src="@GetCardImagePath(card)" alt="@card.CardNumber @card.CardSuit" />
+                                </div>
+                            }
+                        </div>
+                    }
                 </div>
 
                 <div class="row mt-4">
-                    <!-- Первый караван (игрока) -->
-                    <div class="col-md-4 card-stack" @ondrop="e => OnDrop(0, e)">
-                        <h5 class="text-center">Караван 1 (Вы)</h5>
-                        @foreach (var card in _gameState.YourCaravans[0].Cards)
-                        {
-                            <div class="card">@card</div>
-                        }
-                    </div>
-
-                    <!-- Второй караван (игрока) -->
-                    <div class="col-md-4 card-stack" @ondrop="e => OnDrop(1, e)">
-                        <h5 class="text-center">Караван 2 (Вы)</h5>
-                        @foreach (var card in _gameState.YourCaravans[1].Cards)
-                        {
-                            <div class="card">@card</div>
-                        }
-                    </div>
-
-                    <!-- Третий караван (игрока) -->
-                    <div class="col-md-4 card-stack" @ondrop="e => OnDrop(2, e)">
-                        <h5 class="text-center">Караван 3 (Вы)</h5>
-                        @foreach (var card in _gameState.YourCaravans[2].Cards)
-                        {
-                            <div class="card">@card</div>
-                        }
-                    </div>
+                    <!-- Your Caravans -->
+                    @for (int i = 0; i < 3; i++)
+                    {
+                        <div class="col-md-4 card-stack" @ondrop="e => OnDrop(i, e)">
+                            <h5 class="text-center">@($"Your Caravan {i + 1}")</h5>
+                            @foreach (var card in _gameState.YourCaravans[i].Cards)
+                            {
+                                <div class="card">
+                                    <img src="@GetCardImagePath(card)" alt="@card.CardNumber @card.CardSuit" />
+                                </div>
+                            }
+                        </div>
+                    }
                 </div>
             </div>
 
-            <!-- Карты на руке Игрока 2 -->
-    @*         <div class="col-md-2 hand-cards">
+            <!-- Opponent's Hand -->
+            <div class="col-md-2 hand-cards">
                 <h4>Карты противника</h4>
-                @foreach (var card in _gameState.YourHand.Cards)
+                @for (int i = 0; i < _gameState.OpponentsHandCount; i++)
                 {
-                    <div class="card">
-                        @card
+                    <div class="card blank-card">
+                        <img src="/wwwroot/Images/deckg/cardg_back.png" alt="Back of card" />
                     </div>
                 }
-            </div> *@
+            </div>
+        </div>
+
+        <!-- Deck Card Counts -->
+        <div class="row mt-4">
+            <div class="col-md-6 text-center">
+                <h5>Ваши карты в колоде: @_gameState.YourDeckCount</h5>
+            </div>
+            <div class="col-md-6 text-center">
+                <h5>Карты противника в колоде: @_gameState.OpponentsDeckCount</h5>
+            </div>
         </div>
     </div>
 } 

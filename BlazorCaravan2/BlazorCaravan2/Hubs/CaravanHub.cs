@@ -35,10 +35,10 @@ namespace BlazorCaravan2.Hubs {
         }
 
         // Starts the game once both players have joined
-        public async Task StartGame(string sessionId) {
+        public async Task StartGame(string sessionId, string playerId) {
             if (Sessions.TryGetValue(sessionId, out var session) && session.CanStart()) {
                 session.StartGame();
-                await Clients.Group(sessionId).SendAsync("GameStarted", sessionId, session.GetGameState());
+                await Clients.Group(sessionId).SendAsync("GameStarted", sessionId, session.GetGameState(playerId));
             }
         }
         public async Task CreateGame(string sessionId) {
@@ -51,7 +51,7 @@ namespace BlazorCaravan2.Hubs {
         public async Task PlayCard(string sessionId, string playerId, Card card, int caravanIndex) {
             if (Sessions.TryGetValue(sessionId, out var session) && session.IsPlayerTurn(playerId)) {
                 session.PlayCard(playerId, card, caravanIndex);
-                await Clients.Group(sessionId).SendAsync("CardPlayed", session.GetGameState());
+                await Clients.Group(sessionId).SendAsync("CardPlayed", session.GetGameState(playerId));
 
                 if (session.IsGameOver()) {
                     var winner = session.GetWinner();
@@ -66,7 +66,7 @@ namespace BlazorCaravan2.Hubs {
             if (Sessions.TryGetValue(sessionId, out var session) && session.IsPlayerTurn(playerId)) {
                 var card = session.DrawCard(playerId);
                 await Clients.Caller.SendAsync("CardDrawn", card);
-                await Clients.Group(sessionId).SendAsync("GameUpdated", session.GetGameState());
+                await Clients.Group(sessionId).SendAsync("GameUpdated", session.GetGameState(playerId));
             }
         }
 
@@ -74,7 +74,7 @@ namespace BlazorCaravan2.Hubs {
         public async Task EndTurn(string sessionId, string playerId) {
             if (Sessions.TryGetValue(sessionId, out var session) && session.IsPlayerTurn(playerId)) {
                 session.EndTurn();
-                await Clients.Group(sessionId).SendAsync("TurnEnded", session.GetGameState());
+                await Clients.Group(sessionId).SendAsync("TurnEnded", session.GetGameState(playerId));
             }
         }
     }
