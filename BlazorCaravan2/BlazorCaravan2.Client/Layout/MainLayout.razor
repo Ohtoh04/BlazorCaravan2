@@ -1,7 +1,8 @@
 ﻿@inherits LayoutComponentBase
+
 <div class="page">
     <div class="sidebar">
-        <NavMenu IsOpen="@isSidebarOpen" OnToggle="ToggleSidebar" />
+        <NavMenu />
     </div>
 
     <main>
@@ -14,11 +15,9 @@
         </article>
     </main>
 </div>
-@code {
-    private bool isSidebarOpen;
 
-    private Task ToggleSidebar(bool isOpen) {
-        isSidebarOpen = isOpen;
-        return Task.CompletedTask;
-    }
-}
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
