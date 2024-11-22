@@ -19,4 +19,13 @@
     <ProjectReference Include="..\..\BlazorCaravan2.Domain\BlazorCaravan2.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="Layout\MainLayout.razor">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </Content>
+    <Content Update="Layout\NavMenu.razor">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </Content>
+  </ItemGroup>
+
 </Project>
