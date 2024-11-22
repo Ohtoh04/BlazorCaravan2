@@ -9,10 +9,16 @@ using System.Threading.Tasks;
 using CaravanDomain.Entities;
 using CaravanDomain.Models;
 using System.Collections.Concurrent;
+using BlazorCaravan2.Data;
 
 namespace BlazorCaravan2.Hubs {
     public class CaravanHub : Hub {
+        private readonly UserManager<ApplicationUser> _userManager;
         private static ConcurrentDictionary<string, GameSession> Sessions = new ConcurrentDictionary<string, GameSession>();
+
+        public CaravanHub(UserManager<ApplicationUser> userManager) {
+            _userManager = userManager;
+        }
 
         // Called when a player joins a game session
         public async Task JoinGame(string sessionId, string playerId) {
@@ -20,14 +26,16 @@ namespace BlazorCaravan2.Hubs {
                 // Add the player to the session
                 session.AddPlayer(playerId);
 
+                // Add the player to the SignalR group for the session
+                await Groups.AddToGroupAsync(Context.ConnectionId, sessionId);
+
                 // Notify the player they have joined successfully
                 await Clients.Caller.SendAsync("GameJoined", Sessions[sessionId].Players);
 
                 // Notify other players in the session
                 await Clients.Group(sessionId).SendAsync("PlayerJoined", Sessions[sessionId].Players);
 
-                // Add the player to the SignalR group for the session
-                await Groups.AddToGroupAsync(Context.ConnectionId, sessionId);
+
             } else {
                 // Notify the player that the session does not exist
                 await Clients.Caller.SendAsync("Error", "Session not found");
@@ -38,7 +46,12 @@ namespace BlazorCaravan2.Hubs {
         public async Task StartGame(string sessionId, string playerId) {
             if (Sessions.TryGetValue(sessionId, out var session) && session.CanStart()) {
                 session.StartGame();
-                await Clients.Group(sessionId).SendAsync("GameStarted", sessionId, session.GetGameState(playerId));
+
+                foreach (var player in session.Players) {
+                    var gameState = session.GetGameState(player);
+                    var user = await _userManager.FindByIdAsync(player);
+                    await Clients.Group(sessionId).SendAsync("GameStarted", sessionId, gameState, player);
+                }
             }
         }
         public async Task CreateGame(string sessionId) {
@@ -51,7 +64,12 @@ namespace BlazorCaravan2.Hubs {
         public async Task PlayCard(string sessionId, string playerId, Card card, int caravanIndex) {
             if (Sessions.TryGetValue(sessionId, out var session) && session.IsPlayerTurn(playerId)) {
                 session.PlayCard(playerId, card, caravanIndex);
-                await Clients.Group(sessionId).SendAsync("CardPlayed", session.GetGameState(playerId));
+
+                foreach (var player in session.Players) {
+                    var gameState = session.GetGameState(player);
+                    await Clients.Group(sessionId).SendAsync("CardPlayed", gameState, player);
+
+                }
 
                 if (session.IsGameOver()) {
                     var winner = session.GetWinner();
@@ -65,8 +83,12 @@ namespace BlazorCaravan2.Hubs {
         public async Task DrawCard(string sessionId, string playerId) {
             if (Sessions.TryGetValue(sessionId, out var session) && session.IsPlayerTurn(playerId)) {
                 var card = session.DrawCard(playerId);
-                await Clients.Caller.SendAsync("CardDrawn", card);
-                await Clients.Group(sessionId).SendAsync("GameUpdated", session.GetGameState(playerId));
+
+                foreach (var player in session.Players) {
+                    var gameState = session.GetGameState(player);
+                    await Clients.Group(sessionId).SendAsync("GameUpdated", gameState, player);
+
+                }
             }
         }
 
@@ -74,7 +96,10 @@ namespace BlazorCaravan2.Hubs {
         public async Task EndTurn(string sessionId, string playerId) {
             if (Sessions.TryGetValue(sessionId, out var session) && session.IsPlayerTurn(playerId)) {
                 session.EndTurn();
-                await Clients.Group(sessionId).SendAsync("TurnEnded", session.GetGameState(playerId));
+                foreach (var player in session.Players) {
+                    var gameState = session.GetGameState(player);
+                    await Clients.Group(sessionId).SendAsync("TurnEnded", gameState, playerId);
+                }
             }
         }
     }

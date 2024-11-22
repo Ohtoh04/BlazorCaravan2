@@ -1,5 +1,5 @@
 ﻿@page "/createtable"
-@rendermode InteractiveAuto
+@rendermode InteractiveWebAssembly
 
 @using Microsoft.AspNetCore.SignalR.Client;
 @inject NavigationManager Navigation
@@ -18,47 +18,47 @@
 }
 
 @code {
-    private HubConnection? HubConnection;
+    //private HubConnection? HubConnection;
     private string SessionId { get; set; } = string.Empty;
     private string Message { get; set; } = string.Empty;
     private bool IsProcessing { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        HubConnection = new HubConnectionBuilder()
-            .WithUrl(Navigation.ToAbsoluteUri("/caravanhub"))
-            .WithAutomaticReconnect()
-            .Build();
+        // HubConnection = new HubConnectionBuilder()
+        //     .WithUrl(Navigation.ToAbsoluteUri("/caravanhub"))
+        //     .WithAutomaticReconnect()
+        //     .Build();
 
-        try
-        {
-            await HubConnection.StartAsync();
-        }
-        catch (Exception ex)
-        {
-            Message = $"Could not connect to the server: {ex.Message}";
-        }
+        // try
+        // {
+        //     await HubConnection.StartAsync();
+        // }
+        // catch (Exception ex)
+        // {
+        //     Message = $"Could not connect to the server: {ex.Message}";
+        // }
     }
 
     private async Task CreateGameTable()
     {
-        if (HubConnection == null || HubConnection.State != HubConnectionState.Connected)
-        {
-            Message = "SignalR connection is not active. Please refresh the page.";
-            return;
-        }
+        // if (HubConnection == null || HubConnection.State != HubConnectionState.Connected)
+        // {
+        //     Message = "SignalR connection is not active. Please refresh the page.";
+        //     return;
+        // }
 
-        if (string.IsNullOrWhiteSpace(SessionId))
-        {
-            Message = "Session ID cannot be empty.";
-            return;
-        }
+        // if (string.IsNullOrWhiteSpace(SessionId))
+        // {
+        //     Message = "Session ID cannot be empty.";
+        //     return;
+        // }
 
-        IsProcessing = true;
+        // IsProcessing = true;
 
         try
         {
-            await HubConnection.InvokeAsync("CreateGame", SessionId);
+            //await HubConnection.InvokeAsync("CreateGame", SessionId);
             Message = $"Game table with Session ID '{SessionId}' created successfully.";
 
             // Navigate to the Caravan page with the SessionId parameter
@@ -76,9 +76,9 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (HubConnection is not null)
-        {
-            await HubConnection.DisposeAsync();
-        }
+        // if (HubConnection is not null)
+        // {
+        //     await HubConnection.DisposeAsync();
+        // }
     }
 }

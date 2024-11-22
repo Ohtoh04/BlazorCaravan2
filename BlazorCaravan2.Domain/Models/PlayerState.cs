@@ -16,8 +16,7 @@ namespace CaravanDomain.Models {
         }
 
         public Card DrawCard() {
-            // Draw logic here
-            var drawnCard = new Card(CardRank.Ace, CardSuit.Clubs);  // Placeholder
+            var drawnCard = Deck.Draw();
             Hand.Add(drawnCard);
             return drawnCard;
         }

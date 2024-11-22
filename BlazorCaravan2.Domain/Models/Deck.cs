@@ -18,8 +18,8 @@ namespace CaravanDomain.Models {
                     _deck.Add(new Card(cardRank, cardSuit));
                 }
             }
-            _deck.Remove(_deck.First(crd => crd.CardSuit == CardSuit.Hearts && crd.CardNumber == CardRank.Joker));
-            _deck.Remove(_deck.First(crd => crd.CardSuit == CardSuit.Spades && crd.CardNumber == CardRank.Joker));
+            //_deck.Remove(_deck.First(crd => crd.CardSuit == CardSuit.Hearts && crd.CardNumber == CardRank.Joker));
+            //_deck.Remove(_deck.First(crd => crd.CardSuit == CardSuit.Spades && crd.CardNumber == CardRank.Joker));
             Shuffle();
         }
 

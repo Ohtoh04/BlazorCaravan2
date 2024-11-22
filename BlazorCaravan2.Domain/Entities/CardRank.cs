@@ -20,6 +20,5 @@ namespace CaravanDomain.Entities {
         Jack,
         Queen,
         King,
-        Joker
     }
 }

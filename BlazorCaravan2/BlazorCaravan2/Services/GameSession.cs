@@ -9,7 +9,8 @@ namespace CaravanDomain.Models {
     public class GameSession {
         public List<string> Players { get; set; } = new List<string>();
         private Dictionary<string, PlayerState> Playerstates = new Dictionary<string, PlayerState>();
-        private int _currentTurn = 0;
+        private bool gameIsStarted = false;
+        private string _currentTurn = "";
 
         public void AddPlayer(string playerId) {
             if (Players.Count < 2 && !Players.Contains(playerId)) {
@@ -21,6 +22,7 @@ namespace CaravanDomain.Models {
         public bool CanStart() => Players.Count == 2;
 
         public void StartGame() {
+            if (gameIsStarted) return;
             foreach (var playerpair in Playerstates) {
                 playerpair.Value.Deck.Shuffle();
             }
@@ -31,22 +33,26 @@ namespace CaravanDomain.Models {
                     playerState.Hand.Add(playerState.Deck.Draw());
                 }
             }
+             _currentTurn = Players[0];
+
+            gameIsStarted = true;
         }
 
         public bool IsPlayerTurn(string playerId) {
-            return Players[_currentTurn] == playerId;
+            return _currentTurn == playerId;
         }
 
         public void PlayCard(string playerId, Card card, int caravanIndex) {
             if (IsPlayerTurn(playerId)) {
                 var playerState = Playerstates[playerId];
-                if (!playerState.Hand.Contains(card)) return;
+                //if (!playerState.Hand.Contains(card)) return;
 
                 playerState.Hand.Remove(card);
                 var caravan = playerState.Caravans[caravanIndex];
                 caravan.Cards.Add(card);
-
                 ApplyCardEffect(caravan, card);
+
+                DrawCard(playerId);
 
                 EndTurn();
             }
@@ -54,9 +60,6 @@ namespace CaravanDomain.Models {
 
         private void ApplyCardEffect(Caravan caravan, Card card) {
             switch (card.CardNumber) {
-                case CardRank.Joker:
-                    ApplyJokerEffect(caravan, card);
-                    break;
                 case CardRank.Jack:
                     ApplyJackEffect(caravan, card);
                     break;
@@ -102,7 +105,7 @@ namespace CaravanDomain.Models {
         }
 
         public void EndTurn() {
-            _currentTurn = (_currentTurn + 1) % Players.Count;
+            _currentTurn = _currentTurn == Players[0] ? Players[1] : Players[0];
         }
 
         public bool IsGameOver() {

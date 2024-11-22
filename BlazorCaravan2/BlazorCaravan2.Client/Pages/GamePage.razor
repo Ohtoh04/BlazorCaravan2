@@ -1,5 +1,5 @@
 ﻿@page "/caravan/{SessionId}"
-@rendermode InteractiveAuto
+@rendermode InteractiveWebAssembly
 
 @using System.Collections.Generic
 @using BlazorCaravan2.Client.Services
@@ -38,6 +38,8 @@
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
+
+
         if (user.Identity != null && user.Identity.IsAuthenticated)
         {
             YourId = user.FindFirst("sub")?.Value ?? user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -47,13 +49,22 @@
            .WithUrl(Navigation.ToAbsoluteUri("/caravanhub"))
            .Build();
 
-        HubConnection.On<GameState>("CardPlayed", (receivedGameState) =>
+        HubConnection.On<GameState, string>("CardPlayed", (receivedGameState, playerId) =>
         {
+            if (YourId != playerId) return;
+            _gameState = receivedGameState;
+            //HubConnection.InvokeAsync("DrawCard", SessionId, YourId);
+            StateHasChanged();
+        });
+        HubConnection.On<GameState, string>("GameUpdated", (receivedGameState, playerId) =>
+        {
+            if (playerId != YourId) return;
             _gameState = receivedGameState;
             StateHasChanged();
         });
-        HubConnection.On<string, GameState>("GameStarted", (sessionId, receivedGameState) =>
+        HubConnection.On<string, GameState, string>("GameStarted", (sessionId, receivedGameState, playerId) =>
         {
+            if (YourId != playerId) return;
             SessionId = sessionId;
             _gameState = receivedGameState;
             Logger.LogInformation($"game started on player {YourId}");
@@ -67,8 +78,9 @@
 
             StateHasChanged();
         });
-        HubConnection.On<GameState>("TurnEnded", (receivedGameState) =>
+        HubConnection.On<GameState, string>("TurnEnded", (receivedGameState, playerId) =>
         {
+            if (YourId != playerId) return;
             _gameState = receivedGameState;
             StateHasChanged();
         });
@@ -92,41 +104,31 @@
 
 
 
-
         await HubConnection.StartAsync();
+        Logger.LogInformation($"connection starting on {YourId}");
 
-        int retryCount = 0;
-        while (HubConnection.State != HubConnectionState.Connected && retryCount < 5)
-        {
-            await Task.Delay(200);
-            retryCount++;
-        }
 
-        if (HubConnection.State != HubConnectionState.Connected)
-        {
-            Logger.LogError("Failed to connect to SignalR hub after retries.");
-        }
 
         IsConnected = true;
 
-        // Ensure connection state is stable
-        if (HubConnection.State == HubConnectionState.Connected)
-        {
-            await HubConnection.InvokeAsync("JoinGame", SessionId, YourId);
-            Message = "Waiting for another player to join...";
-        }
-        else
+        await HubConnection.InvokeAsync("CreateGame", SessionId);
+
+        if (HubConnection.State != HubConnectionState.Connected)
         {
             Logger.LogError("Failed to connect to SignalR hub.");
         }
+        await HubConnection.InvokeAsync("JoinGame", SessionId, YourId);
+        Message = "Waiting for another player to join...";
+        
+
         StateHasChanged();
     }
 
-    public async Task PlayCard(string card, int caravanIndex)
+    public async Task PlayCard(Card card, int caravanIndex)
     {
         if (HubConnection != null)
         {
-            await HubConnection.InvokeAsync("PlayCard", SessionId, YourId, card, caravanIndex);
+            await HubConnection.InvokeAsync("PlayCard", SessionId, YourId, SelectedCard, caravanIndex); // PlayCard(string sessionId, string playerId, Card card, int caravanIndex)
         }
     }
 
@@ -142,12 +144,6 @@
     {
         // Base path for the card images
         const string basePath = "Images/deckg/";
-
-        // If the card is a Joker
-        if (card.CardNumber == CardRank.Joker)
-        {
-            return $"{basePath}cardg_joker.png"; // Assuming the Joker has a specific filename
-        }
 
         // Map suits to their corresponding letters
         string suitLetter = card.CardSuit switch
@@ -215,13 +211,11 @@
         }
     }
 
-    private void OnPlaceCardInCaravan(int caravanIndex)
+    private async Task OnPlaceCardInCaravan(int caravanIndex)
     {
         if (SelectedCard != null)
         {
-            HubConnection.InvokeAsync("CardPlayed", SessionId, YourId, SelectedCard, caravanIndex);
-            _gameState.YourCaravans[caravanIndex].Cards.Add(SelectedCard);
-            _gameState.YourHand.Remove(SelectedCard);
+            await HubConnection.InvokeAsync("PlayCard", SessionId, YourId, SelectedCard, caravanIndex); // PlayCard(string sessionId, string playerId, Card card, int caravanIndex)
 
             // Снять выбор
             SelectedCard = null;
@@ -268,11 +262,11 @@
                 <h4>Ваши карты</h4>
                 @foreach (var card in _gameState.YourHand)
                 {
-                    <div class="card @(card == SelectedCard ? "selected" : "")"
+                    <div class="playing-card @(card == SelectedCard ? "selected" : "")"
                          @onmouseover="() => OnHoverCard(card)"
                          @onmouseout="() => OnLeaveCard(card)"
                          @onclick="() => OnSelectCard(card)">
-                        <img src="@GetCardImagePath(card)" alt="@card.CardNumber @card.CardSuit" />
+                        <img class="card" src="@GetCardImagePath(card)" alt="@card.CardNumber @card.CardSuit" />
                     </div>
                 }
             </div>
@@ -283,12 +277,12 @@
                     <!-- Opponent Caravans -->
                     @for (int i = 0; i < 3; i++)
                     {
-                        <div class="col-md-4 card-stack enemy-stack">
+                        <div class="col-md-4">
                             <h5 class="text-center">@($"Opponent Caravan {i + 1}")</h5>
                             @foreach (var card in _gameState.OpponentCaravans[i].Cards)
                             {
-                                <div class="card">
-                                    <img src="@GetCardImagePath(card)" alt="@card.CardNumber @card.CardSuit" />
+                                <div class="playing-card">
+                                    <img style="width:128px; height:256px" src="@GetCardImagePath(card)" alt="@card.CardNumber @card.CardSuit" />
                                 </div>
                             }
                         </div>
@@ -297,19 +291,36 @@
 
                 <div class="row mt-4">
                     <!-- Your Caravans -->
-                    @for (int i = 0; i < 3; i++)
-                    {
-                        <div class="col-md-4 card-stack"
-                             @onclick="() => OnPlaceCardInCaravan(i)">
-                            <h5 class="text-center">@($"Your Caravan {i + 1}")</h5>
-                            @foreach (var card in _gameState.YourCaravans[i].Cards)
-                            {
-                                <div class="card">
-                                    <img src="@GetCardImagePath(card)" alt="@card.CardNumber @card.CardSuit" />
-                                </div>
-                            }
-                        </div>
-                    }
+                    <div class="col-md-4"
+                            @onclick="() => OnPlaceCardInCaravan(0)">
+                        <h5 class="text-center">@($"Your Caravan {1}")</h5>
+                        @foreach (var card in _gameState.YourCaravans[0].Cards)
+                        {
+                            <div class="playing-card">
+                                <img style="width:128px; height:256px" src="@GetCardImagePath(card)" alt="@card.CardNumber @card.CardSuit" />
+                            </div>
+                        }
+                    </div>
+                    <div class="col-md-4"
+                         @onclick="() => OnPlaceCardInCaravan(1)">
+                        <h5 class="text-center">@($"Your Caravan {2}")</h5>
+                        @foreach (var card in _gameState.YourCaravans[1].Cards)
+                        {
+                            <div class="playing-card">
+                                <img style="width:128px; height:256px" src="@GetCardImagePath(card)" alt="@card.CardNumber @card.CardSuit" />
+                            </div>
+                        }
+                    </div>
+                    <div class="col-md-4 card-stack"
+                         @onclick="() => OnPlaceCardInCaravan(2)">
+                        <h5 class="text-center">@($"Your Caravan {3}")</h5>
+                        @foreach (var card in _gameState.YourCaravans[2].Cards)
+                        {
+                            <div class="playing-card">
+                                <img style="width:128px; height:256px" src="@GetCardImagePath(card)" alt="@card.CardNumber @card.CardSuit" />
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
 
@@ -319,7 +330,7 @@
                 @for (int i = 0; i < _gameState.OpponentsHandCount; i++)
                 {
                     <div class="card blank-card">
-                        <img src="/wwwroot/Images/deckg/cardg_back.png" alt="Back of card" />
+                        <img style="width:128px; height:256px" src="/wwwroot/Images/deckg/cardg_back.png" alt="Back of card" />
                     </div>
                 }
             </div>
