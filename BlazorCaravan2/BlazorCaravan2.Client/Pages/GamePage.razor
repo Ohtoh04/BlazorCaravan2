@@ -190,21 +190,45 @@
         }
     }
 
-    void OnDragStart(string card, DragEventArgs e)
+    private Card? SelectedCard { get; set; } = null;
+
+    private void OnHoverCard(Card card)
     {
-        //e.DataTransfer.SetData("text/plain", card);
+        // Можно добавить логику для реакции на наведение.
     }
 
-    async Task OnDrop(int caravanIndex, DragEventArgs e)
+    private void OnLeaveCard(Card card)
     {
-        // var card = e.DataTransfer.GetData("text/plain");
-        // if (!string.IsNullOrEmpty(card))
-        // {
-        //     await PlayCard(card, caravanIndex);
-        // }
+        // Можно добавить логику для ухода мыши с карты.
     }
 
+    private void OnSelectCard(Card card)
+    {
+        // Если карта уже выбрана, снять выбор
+        if (SelectedCard == card)
+        {
+            SelectedCard = null;
+        }
+        else
+        {
+            SelectedCard = card;
+        }
+    }
 
+    private void OnPlaceCardInCaravan(int caravanIndex)
+    {
+        if (SelectedCard != null)
+        {
+            HubConnection.InvokeAsync("CardPlayed", SessionId, YourId, SelectedCard, caravanIndex);
+            _gameState.YourCaravans[caravanIndex].Cards.Add(SelectedCard);
+            _gameState.YourHand.Remove(SelectedCard);
+
+            // Снять выбор
+            SelectedCard = null;
+        }
+        StateHasChanged();
+
+    }
 
     private async Task PlayerReady(ChangeEventArgs e)
     {
@@ -244,7 +268,10 @@
                 <h4>Ваши карты</h4>
                 @foreach (var card in _gameState.YourHand)
                 {
-                    <div class="card" draggable="true" @ondragstart="e => OnDragStart(card.ToString(), e)">
+                    <div class="card @(card == SelectedCard ? "selected" : "")"
+                         @onmouseover="() => OnHoverCard(card)"
+                         @onmouseout="() => OnLeaveCard(card)"
+                         @onclick="() => OnSelectCard(card)">
                         <img src="@GetCardImagePath(card)" alt="@card.CardNumber @card.CardSuit" />
                     </div>
                 }
@@ -272,7 +299,8 @@
                     <!-- Your Caravans -->
                     @for (int i = 0; i < 3; i++)
                     {
-                        <div class="col-md-4 card-stack" @ondrop="e => OnDrop(i, e)">
+                        <div class="col-md-4 card-stack"
+                             @onclick="() => OnPlaceCardInCaravan(i)">
                             <h5 class="text-center">@($"Your Caravan {i + 1}")</h5>
                             @foreach (var card in _gameState.YourCaravans[i].Cards)
                             {
