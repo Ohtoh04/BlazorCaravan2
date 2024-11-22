@@ -21,7 +21,7 @@ namespace BlazorCaravan2.Hubs {
                 session.AddPlayer(playerId);
 
                 // Notify the player they have joined successfully
-                await Clients.Caller.SendAsync("GameJoined", sessionId, playerId);
+                await Clients.Caller.SendAsync("GameJoined", Sessions[sessionId].Players);
 
                 // Notify other players in the session
                 await Clients.Group(sessionId).SendAsync("PlayerJoined", Sessions[sessionId].Players);

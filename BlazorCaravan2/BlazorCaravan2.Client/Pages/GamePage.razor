@@ -78,8 +78,9 @@
             Logger.LogInformation($"Player Joined player[0] {playerIds[0]} player[1] {playerIds[1]}");
             StateHasChanged();
         });
-        HubConnection.On("GameJoined", () =>
+        HubConnection.On<List<string>>("GameJoined", (playerIds) =>
         {
+            OpponentsId = playerIds[0] == YourId ? playerIds[1] : playerIds[0];
             Logger.LogInformation($"Game Joined your id {YourId} opponents id {OpponentsId}");
             StateHasChanged();
         });
@@ -90,7 +91,22 @@
         });
 
 
+
+
         await HubConnection.StartAsync();
+
+        int retryCount = 0;
+        while (HubConnection.State != HubConnectionState.Connected && retryCount < 5)
+        {
+            await Task.Delay(200);
+            retryCount++;
+        }
+
+        if (HubConnection.State != HubConnectionState.Connected)
+        {
+            Logger.LogError("Failed to connect to SignalR hub after retries.");
+        }
+
         IsConnected = true;
 
         // Ensure connection state is stable
